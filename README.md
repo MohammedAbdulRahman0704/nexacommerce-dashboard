@@ -16,8 +16,5 @@ A data analytics dashboard built using HTML, CSS, JavaScript, and Chart.js.
 ## Dataset
 Simulated e-commerce dataset (2022–2024)
 
-## Preview
-(Add screenshot here)
-
 ## Author
 Mohammed Abdul Rahman
