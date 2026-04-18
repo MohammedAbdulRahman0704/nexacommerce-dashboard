@@ -1,0 +1,6 @@
+event_type,unique_users,total_events,conv_from_top_pct,step_conv_pct
+page_view,7842,75787,100.0,
+product_view,7753,63613,98.9,98.9
+add_to_cart,7432,37758,94.8,95.9
+checkout_start,6633,20038,84.6,89.2
+checkout_complete,6458,17755,82.4,97.4

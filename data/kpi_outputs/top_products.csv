@@ -1,0 +1,21 @@
+product_id,name,category,price,margin_pct,orders_count,units_sold,total_revenue,gross_profit
+47,Ramirez-Jones Laptop ZR-458,Laptops,2392.7,88.6,265,399,938775.7,831755.27
+43,Estrada Laptop VJ-869,Laptops,2469.64,90.7,261,371,897467.2,814002.75
+41,"Thornton, Laptop XL-280",Laptops,2343.87,86.5,268,391,891959.79,771545.22
+39,"Cooper, Laptop DF-874",Laptops,2182.34,87.7,252,365,780404.8,684415.01
+30,Riley Laptop DL-050,Laptops,2221.21,87.0,259,355,770537.82,670367.9
+45,"Shields, Laptop EO-160",Laptops,1962.82,90.5,237,364,698469.55,632114.94
+49,"Hamilton, Laptop YK-981",Laptops,2009.53,84.4,246,344,676508.21,570972.93
+35,Howell-Hart Laptop NG-118,Laptops,2036.2,85.9,238,338,675407.54,580175.08
+18,"Sellers, Smartphone PD-154",Smartphones,1141.99,88.7,408,599,671033.21,595206.46
+32,"Hensley, Laptop MC-939",Laptops,1690.78,86.3,280,399,662785.69,571984.05
+7,"Perez, Smartphone RD-316",Smartphones,1024.24,89.7,444,621,622072.21,557998.77
+31,"Calhoun, Laptop EM-812",Laptops,1859.96,89.3,237,336,613693.8,548028.56
+37,"Turner, Laptop TQ-808",Laptops,1938.36,85.4,238,325,612134.03,522762.46
+28,Lewis-Morales Laptop AY-026,Laptops,1666.07,85.7,273,375,610448.11,523154.03
+24,Lee-Davis Laptop AD-656,Laptops,1633.36,80.9,254,381,609488.2,493075.95
+33,Barnes Laptop QN-985,Laptops,1605.45,86.8,260,386,608786.64,528426.8
+13,Campos Smartphone ME-226,Smartphones,1074.54,85.1,379,536,562790.41,478934.64
+48,Crosby-Wilson Laptop QC-429,Laptops,1712.19,85.2,237,331,555263.16,473084.21
+22,"Spencer, Smartphone CV-031",Smartphones,997.4,81.9,382,559,547373.12,448298.59
+5,Munoz-Roman Smartphone YF-781,Smartphones,883.9,86.1,419,610,528925.68,455405.01

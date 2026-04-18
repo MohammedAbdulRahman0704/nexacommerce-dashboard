@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexaCommerce Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #090e1a;
+    --surface:  #0f1729;
+    --card:     #141e35;
+    --border:   #1e2d4a;
+    --accent:   #00e5ff;
+    --accent2:  #ff4d6d;
+    --amber:    #ffc947;
+    --green:    #00e096;
+    --purple:   #a78bfa;
+    --text:     #e2e8f8;
+    --muted:    #5a6a8a;
+    --mono:     'DM Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .layout { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 48px; }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 28px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .logo { display: flex; flex-direction: column; gap: 2px; }
+  .logo-name {
+    font-family: var(--sans); font-size: 22px; font-weight: 800;
+    letter-spacing: -0.5px; color: var(--text);
+  }
+  .logo-name span { color: var(--accent); }
+  .logo-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .date-badge {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 8px var(--green); animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Tab nav ── */
+  .tab-nav {
+    display: flex; gap: 4px; margin-bottom: 28px;
+    border-bottom: 1px solid var(--border); padding-bottom: 0;
+  }
+  .tab-btn {
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    padding: 10px 20px; border: none; background: none; cursor: pointer;
+    color: var(--muted); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all 0.2s; letter-spacing: 0.3px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Section ── */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── KPI cards ── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 22px;
+    position: relative; overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .kpi-card.c-cyan::before  { background: var(--accent); }
+  .kpi-card.c-red::before   { background: var(--accent2); }
+  .kpi-card.c-amber::before { background: var(--amber); }
+  .kpi-card.c-green::before { background: var(--green); }
+  .kpi-card.c-purple::before{ background: var(--purple); }
+
+  .kpi-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .kpi-value { font-family: var(--sans); font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; margin-bottom: 6px; }
+  .kpi-sub   { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .kpi-badge {
+    display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 4px; margin-top: 6px;
+  }
+  .badge-up   { background: rgba(0,224,150,0.12); color: var(--green); }
+  .badge-down { background: rgba(255,77,109,0.12); color: var(--accent2); }
+  .badge-warn { background: rgba(255,201,71,0.12); color: var(--amber); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Chart containers ── */
+  .charts-row { display: grid; gap: 20px; margin-bottom: 20px; }
+  .charts-2col { grid-template-columns: 2fr 1fr; }
+  .charts-equal { grid-template-columns: 1fr 1fr; }
+  .charts-3col  { grid-template-columns: 1fr 1fr 1fr; }
+
+  .chart-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 24px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .chart-title {
+    font-family: var(--sans); font-size: 13px; font-weight: 700;
+    color: var(--text); margin-bottom: 4px; letter-spacing: 0.2px;
+  }
+  .chart-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 18px; }
+  .chart-wrap { position: relative; }
+
+  /* ── Cohort heatmap ── */
+  #cohort-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 10px; }
+  #cohort-table th { color: var(--muted); font-weight: 400; padding: 4px 6px; text-align: center; border-bottom: 1px solid var(--border); }
+  #cohort-table th:first-child { text-align: left; width: 80px; }
+  #cohort-table td { padding: 3px 4px; text-align: center; }
+  #cohort-table td:first-child { color: var(--muted); text-align: left; font-size: 10px; padding-left: 0; }
+  .hm-cell {
+    display: inline-block; width: 36px; height: 26px; line-height: 26px;
+    border-radius: 4px; font-size: 9px; font-weight: 500; cursor: default;
+    transition: transform 0.15s;
+  }
+  .hm-cell:hover { transform: scale(1.15); z-index: 10; position: relative; }
+
+  /* ── Funnel ── */
+  .funnel-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .funnel-step { position: relative; }
+  .funnel-bar-bg { background: var(--surface); border-radius: 6px; height: 38px; overflow: hidden; position: relative; }
+  .funnel-bar-fill {
+    height: 100%; border-radius: 6px;
+    display: flex; align-items: center; padding: 0 14px;
+    justify-content: space-between; transition: width 1s cubic-bezier(.4,0,.2,1);
+  }
+  .funnel-label { font-family: var(--sans); font-size: 12px; font-weight: 600; color: #0a0e1a; white-space: nowrap; }
+  .funnel-pct   { font-family: var(--mono); font-size: 11px; color: rgba(0,0,0,0.6); }
+  .funnel-drop  { font-family: var(--mono); font-size: 10px; color: var(--accent2); text-align: right; margin-top: 3px; }
+
+  /* ── Segment table ── */
+  .seg-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .seg-table th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); letter-spacing: 1px; text-transform: uppercase; }
+  .seg-table td { padding: 12px 10px; border-bottom: 1px solid rgba(30,45,74,0.5); }
+  .seg-table tr:last-child td { border-bottom: none; }
+  .seg-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+  .seg-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .churn-bar { height: 6px; border-radius: 3px; background: var(--surface); overflow: hidden; margin-top: 4px; }
+  .churn-fill { height: 100%; border-radius: 3px; }
+
+  /* ── Insight cards ── */
+  .insight-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 20px; }
+  .insight-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .insight-tag {
+    font-family: var(--mono); font-size: 10px; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; display: inline-block;
+    letter-spacing: 0.5px;
+  }
+  .tag-problem { background: rgba(255,77,109,0.12); color: var(--accent2); }
+  .tag-solution{ background: rgba(0,229,255,0.10); color: var(--accent); }
+  .tag-impact  { background: rgba(0,224,150,0.10); color: var(--green); }
+  .insight-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .insight-body  { font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.7; }
+  .insight-metric { font-family: var(--sans); font-size: 22px; font-weight: 800; color: var(--accent); margin: 10px 0 4px; }
+
+  /* ── Top products ── */
+  .prod-list { display: flex; flex-direction: column; gap: 10px; }
+  .prod-row { display: flex; align-items: center; gap: 12px; }
+  .prod-rank { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 18px; }
+  .prod-info { flex: 1; min-width: 0; }
+  .prod-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prod-cat  { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .prod-rev  { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--accent); white-space: nowrap; }
+  .prod-bar  { width: 80px; height: 4px; background: var(--surface); border-radius: 2px; overflow: hidden; }
+  .prod-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2,1fr); }
+    .charts-2col, .charts-equal, .charts-3col { grid-template-columns: 1fr; }
+    .insight-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-name">Nexa<span>Commerce</span></div>
+      <div class="logo-sub">Business Analytics Dashboard · 2022–2024</div>
+    </div>
+    <div class="header-right">
+      <div class="date-badge">Data: Jan 2022 – Mar 2024</div>
+      <div class="status-dot" title="Live data"></div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('revenue')">Revenue</button>
+    <button class="tab-btn" onclick="switchTab('retention')">Retention & Cohorts</button>
+    <button class="tab-btn" onclick="switchTab('churn')">Churn Analysis</button>
+    <button class="tab-btn" onclick="switchTab('products')">Products</button>
+    <button class="tab-btn" onclick="switchTab('insights')">Problem → Impact</button>
+  </nav>
+
+  <!-- ══════════════ TAB 1: REVENUE ══════════════ -->
+  <div id="tab-revenue" class="section active">
+
+    <div class="kpi-grid">
+      <div class="kpi-card c-cyan" style="animation-delay:.05s">
+        <div class="kpi-label">Total Net Revenue</div>
+        <div class="kpi-value" style="color:var(--accent)">$41.7M</div>
+        <div class="kpi-sub">Jan 2022 – Mar 2024</div>
+        <div class="kpi-badge badge-up">↑ Growing</div>
+      </div>
+      <div class="kpi-card c-green" style="animation-delay:.1s">
+        <div class="kpi-label">Avg MoM Growth</div>
+        <div class="kpi-value" style="color:var(--green)">+12.4%</div>
+        <div class="kpi-sub">27 months tracked</div>
+        <div class="kpi-badge badge-up">Strong trend</div>
+      </div>
+      <div class="kpi-card c-amber" style="animation-delay:.15s">
+        <div class="kpi-label">Mar 2024 Revenue</div>
+        <div class="kpi-value" style="color:var(--amber)">$3.87M</div>
+        <div class="kpi-sub">+4.3% vs Feb 2024</div>
+        <div class="kpi-badge badge-up">↑ +$161k MoM</div>
+      </div>
+      <div class="kpi-card c-purple" style="animation-delay:.2s">
+        <div class="kpi-label">Jun 2024 Forecast</div>
+        <div class="kpi-value" style="color:var(--purple)">~$4.3M</div>
+        <div class="kpi-sub">Linear trend projection</div>
+        <div class="kpi-badge badge-up">R² = 0.887</div>
+      </div>
+    </div>
+
+    <div class="charts-row charts-2col">
+      <div class="chart-card">
+        <div class="chart-title">Monthly Net Revenue</div>
+        <div class="chart-sub">Completed orders · 2022–2024 · Trend overlay</div>
+        <div class="chart-wrap"><canvas id="revenueChart" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">MoM Growth Rate</div>
+        <div class="chart-sub">Month-over-month % change</div>
+        <div class="chart-wrap"><canvas id="momChart" height="220"></canvas></div>
+      </div>
+    </div>
+
+    <div class="charts-row charts-equal">
+      <div class="chart-card">
+        <div class="chart-title">Revenue by Category</div>
+        <div class="chart-sub">All-time · completed orders</div>
+        <div class="chart-wrap"><canvas id="catChart" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Monthly Active Buyers</div>
+        <div class="chart-sub">Unique customers placing orders per month</div>
+        <div class="chart-wrap"><canvas id="buyersChart" height="220"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB 2: RETENTION ══════════════ -->
+  <div id="tab-retention" class="section">
+    <div class="kpi-grid">
+      <div class="kpi-card c-red" style="animation-delay:.05s">
+        <div class="kpi-label">M+1 Avg Retention</div>
+        <div class="kpi-value" style="color:var(--accent2)">21.4%</div>
+        <div class="kpi-sub">Month after first order</div>
+        <div class="kpi-badge badge-warn">Below industry avg</div>
+      </div>
+      <div class="kpi-card c-red" style="animation-delay:.1s">
+        <div class="kpi-label">M+3 Avg Retention</div>
+        <div class="kpi-value" style="color:var(--accent2)">9.6%</div>
+        <div class="kpi-sub">3 months post first order</div>
+        <div class="kpi-badge badge-down">−11.8pp drop from M+1</div>
+      </div>
+      <div class="kpi-card c-amber" style="animation-delay:.15s">
+        <div class="kpi-label">Target M+3 (post-fix)</div>
+        <div class="kpi-value" style="color:var(--amber)">14%</div>
+        <div class="kpi-sub">After email drip launch</div>
+        <div class="kpi-badge badge-up">+4.4pp target lift</div>
+      </div>
+      <div class="kpi-card c-green" style="animation-delay:.2s">
+        <div class="kpi-label">Cohorts Analysed</div>
+        <div class="kpi-value" style="color:var(--green)">27</div>
+        <div class="kpi-sub">Jan 2022 – Mar 2024</div>
+        <div class="kpi-badge badge-up">Consistent pattern</div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:20px">
+      <div class="chart-title">Cohort Retention Heatmap</div>
+      <div class="chart-sub">% of cohort still purchasing · M+0 (first month) through M+12 · Red = low, Green = high</div>
+      <div style="overflow-x:auto;margin-top:4px"><table id="cohort-table"></table></div>
+    </div>
+
+    <div class="charts-row charts-equal">
+      <div class="chart-card">
+        <div class="chart-title">Average Retention by Period</div>
+        <div class="chart-sub">Mean retention % across all cohorts per month</div>
+        <div class="chart-wrap"><canvas id="retentionLineChart" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Retention: First vs Recent Cohorts</div>
+        <div class="chart-sub">Early 2022 cohorts vs 2023+ cohorts comparison</div>
+        <div class="chart-wrap"><canvas id="cohortCompareChart" height="220"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB 3: CHURN ══════════════ -->
+  <div id="tab-churn" class="section">
+    <div class="kpi-grid">
+      <div class="kpi-card c-red" style="animation-delay:.05s">
+        <div class="kpi-label">Overall Churn Rate</div>
+        <div class="kpi-value" style="color:var(--accent2)">70.9%</div>
+        <div class="kpi-sub">No order in last 90 days</div>
+        <div class="kpi-badge badge-down">Critical</div>
+      </div>
+      <div class="kpi-card c-red" style="animation-delay:.1s">
+        <div class="kpi-label">At-Risk Revenue</div>
+        <div class="kpi-value" style="color:var(--accent2)">$2.98M</div>
+        <div class="kpi-sub">500 customers · 45–90 day idle</div>
+        <div class="kpi-badge badge-warn">Recoverable</div>
+      </div>
+      <div class="kpi-card c-amber" style="animation-delay:.15s">
+        <div class="kpi-label">Cart Abandon Rate</div>
+        <div class="kpi-value" style="color:var(--amber)">10.8%</div>
+        <div class="kpi-sub">Checkout start → not complete</div>
+        <div class="kpi-badge badge-warn">Fix: guest checkout</div>
+      </div>
+      <div class="kpi-card c-green" style="animation-delay:.2s">
+        <div class="kpi-label">Win-Back Potential</div>
+        <div class="kpi-value" style="color:var(--green)">$1.04M</div>
+        <div class="kpi-sub">35% recovery on at-risk base</div>
+        <div class="kpi-badge badge-up">Quick win</div>
+      </div>
+    </div>
+
+    <div class="charts-row charts-equal">
+      <div class="chart-card">
+        <div class="chart-title">Churn Rate by Segment</div>
+        <div class="chart-sub">% churned per customer segment</div>
+        <div class="chart-wrap"><canvas id="churnSegChart" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Conversion Funnel</div>
+        <div class="chart-sub">User drop-off at each stage</div>
+        <div class="funnel-wrap" id="funnelViz" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="charts-row charts-equal" style="margin-top:20px">
+      <div class="chart-card">
+        <div class="chart-title">Churn by Acquisition Channel</div>
+        <div class="chart-sub">Which channels bring least loyal customers</div>
+        <div class="chart-wrap"><canvas id="churnChanChart" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Segment LTV vs Churn</div>
+        <div class="chart-sub">Higher LTV segments retain better</div>
+        <div class="chart-wrap"><canvas id="ltvChurnChart" height="220"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB 4: PRODUCTS ══════════════ -->
+  <div id="tab-products" class="section">
+    <div class="kpi-grid">
+      <div class="kpi-card c-cyan" style="animation-delay:.05s">
+        <div class="kpi-label">Top Category</div>
+        <div class="kpi-value" style="color:var(--accent);font-size:22px">Laptops</div>
+        <div class="kpi-sub">$14.93M · 35.8% of revenue</div>
+        <div class="kpi-badge badge-up">82.2% avg margin</div>
+      </div>
+      <div class="kpi-card c-green" style="animation-delay:.1s">
+        <div class="kpi-label">Top Product Revenue</div>
+        <div class="kpi-value" style="color:var(--green);font-size:22px">$938K</div>
+        <div class="kpi-sub">Bailey-Hoover Laptop QM-330</div>
+        <div class="kpi-badge badge-up">All-time leader</div>
+      </div>
+      <div class="kpi-card c-amber" style="animation-delay:.15s">
+        <div class="kpi-label">Total Categories</div>
+        <div class="kpi-value" style="color:var(--amber)">8</div>
+        <div class="kpi-sub">Electronics & Accessories</div>
+        <div class="kpi-badge badge-up">Diversified</div>
+      </div>
+      <div class="kpi-card c-purple" style="animation-delay:.2s">
+        <div class="kpi-label">Total Products</div>
+        <div class="kpi-value" style="color:var(--purple)">225</div>
+        <div class="kpi-sub">92% currently active</div>
+        <div class="kpi-badge badge-up">Active SKUs</div>
+      </div>
+    </div>
+
+    <div class="charts-row charts-equal">
+      <div class="chart-card">
+        <div class="chart-title">Revenue by Category</div>
+        <div class="chart-sub">Total revenue · completed orders</div>
+        <div class="chart-wrap"><canvas id="catDonutChart" height="280"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top 8 Products by Revenue</div>
+        <div class="chart-sub">All-time · completed orders</div>
+        <div class="prod-list" id="prodList" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB 5: INSIGHTS ══════════════ -->
+  <div id="tab-insights" class="section">
+    <div class="kpi-grid">
+      <div class="kpi-card c-red" style="animation-delay:.05s">
+        <div class="kpi-label">Problems Found</div>
+        <div class="kpi-value" style="color:var(--accent2)">3</div>
+        <div class="kpi-sub">Retention · Churn · Checkout</div>
+      </div>
+      <div class="kpi-card c-cyan" style="animation-delay:.1s">
+        <div class="kpi-label">Solutions Proposed</div>
+        <div class="kpi-value" style="color:var(--accent)">5</div>
+        <div class="kpi-sub">Drip · Win-back · Loyalty · UX · Segments</div>
+      </div>
+      <div class="kpi-card c-green" style="animation-delay:.15s">
+        <div class="kpi-label">Revenue Impact (Low)</div>
+        <div class="kpi-value" style="color:var(--green)">$2.9M</div>
+        <div class="kpi-sub">Annual conservative estimate</div>
+      </div>
+      <div class="kpi-card c-purple" style="animation-delay:.2s">
+        <div class="kpi-label">Revenue Impact (High)</div>
+        <div class="kpi-value" style="color:var(--purple)">$4.76M</div>
+        <div class="kpi-sub">Annual optimistic estimate</div>
+      </div>
+    </div>
+
+    <div class="insight-grid">
+      <div class="insight-card">
+        <span class="insight-tag tag-problem">PROBLEM 1</span>
+        <div class="insight-title">Retention Cliff at Month 3</div>
+        <div class="insight-metric">−11.8pp</div>
+        <div class="insight-body">M+1 retention: 21.4% → M+3: 9.6%. Consistent across all 27 cohorts — structural issue, not seasonal. No post-purchase communication in the 21–45 day window.</div>
+      </div>
+      <div class="insight-card" style="border-color:var(--accent)">
+        <span class="insight-tag tag-solution">SOLUTION 1</span>
+        <div class="insight-title">3-Touch Re-engagement Drip</div>
+        <div class="insight-metric">+4.4pp target</div>
+        <div class="insight-body">Day 7: Order follow-up + cross-sell. Day 21: ML-ranked "You might also like". Day 45: 10% loyalty incentive (time-limited). Industry benchmark: +4–7pp M+3 lift.</div>
+      </div>
+      <div class="insight-card" style="border-color:var(--green)">
+        <span class="insight-tag tag-impact">IMPACT 1</span>
+        <div class="insight-title">Retention Revenue Recovery</div>
+        <div class="insight-metric">$1.2M–$2.1M</div>
+        <div class="insight-body">~12 additional retained customers per cohort × avg $2,800 LTV = $33,600/cohort. Annualised across 12 monthly cohorts. Conservative industry estimate applied.</div>
+      </div>
+
+      <div class="insight-card">
+        <span class="insight-tag tag-problem">PROBLEM 2</span>
+        <div class="insight-title">70.9% Overall Churn Rate</div>
+        <div class="insight-metric">$2.98M at risk</div>
+        <div class="insight-body">500 customers idle 45–90 days. Email campaigns churn worst (72.4%) — attracting deal-seekers. VIP segment churns at only 52.1% despite highest LTV.</div>
+      </div>
+      <div class="insight-card" style="border-color:var(--accent)">
+        <span class="insight-tag tag-solution">SOLUTION 2</span>
+        <div class="insight-title">Win-Back + Loyalty Programme</div>
+        <div class="insight-metric">35% recovery target</div>
+        <div class="insight-body">Personalised "We miss you" email + 15% discount to 500 at-risk customers. Tiered loyalty points for VIP + Premium (25% of base, 68% of revenue).</div>
+      </div>
+      <div class="insight-card" style="border-color:var(--green)">
+        <span class="insight-tag tag-impact">IMPACT 2</span>
+        <div class="insight-title">Churn Reduction Revenue</div>
+        <div class="insight-metric">$1.04M recovered</div>
+        <div class="insight-body">Win-back: 175 customers × avg $5,970 recovered LTV = $1.04M. Loyalty programme: churn 70.9% → 62% = +854 active customers × $2,200 avg = $1.88M/yr.</div>
+      </div>
+
+      <div class="insight-card">
+        <span class="insight-tag tag-problem">PROBLEM 3</span>
+        <div class="insight-title">10.8% Cart Abandonment</div>
+        <div class="insight-metric">175 lost/month</div>
+        <div class="insight-body">Users dropping at checkout_start → checkout_complete. Forced account creation is #1 UX barrier. 6+ field form with no autofill or progress indicator.</div>
+      </div>
+      <div class="insight-card" style="border-color:var(--accent)">
+        <span class="insight-tag tag-solution">SOLUTION 3</span>
+        <div class="insight-title">Checkout UX Overhaul</div>
+        <div class="insight-metric">2-step flow</div>
+        <div class="insight-body">Enable guest checkout. Compress to 2-step: shipping → payment. Add Google Places address autocomplete. Add progress bar. Estimated 1–2 week engineering effort.</div>
+      </div>
+      <div class="insight-card" style="border-color:var(--green)">
+        <span class="insight-tag tag-impact">IMPACT 3</span>
+        <div class="insight-title">Checkout Revenue Recovery</div>
+        <div class="insight-metric">$322K/year</div>
+        <div class="insight-body">Recover 25% of 10.8% abandon rate = 44 extra completions/month × avg $610 AOV × 12 months. Industry: guest checkout reduces abandon by 25–35%.</div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-top:20px">
+      <div class="chart-title">Projected Annual Revenue Impact</div>
+      <div class="chart-sub">Low vs High estimate per initiative</div>
+      <div class="chart-wrap"><canvas id="impactChart" height="160"></canvas></div>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+
+<script>
+// ── Raw data ──────────────────────────────────────────────────
+const DATA = {"revenue":[{"month":"2022-01","revenue":246543,"buyers":85,"orders":222,"mom":0},{"month":"2022-02","revenue":504237,"buyers":165,"orders":419,"mom":104.5},{"month":"2022-03","revenue":551963,"buyers":234,"orders":532,"mom":9.5},{"month":"2022-04","revenue":541388,"buyers":287,"orders":522,"mom":-1.9},{"month":"2022-05","revenue":651988,"buyers":306,"orders":574,"mom":20.4},{"month":"2022-06","revenue":754363,"buyers":393,"orders":696,"mom":15.7},{"month":"2022-07","revenue":749364,"buyers":390,"orders":677,"mom":-0.7},{"month":"2022-08","revenue":911859,"buyers":439,"orders":814,"mom":21.7},{"month":"2022-09","revenue":915223,"buyers":461,"orders":806,"mom":0.4},{"month":"2022-10","revenue":1028725,"buyers":532,"orders":890,"mom":12.4},{"month":"2022-11","revenue":1096204,"buyers":610,"orders":974,"mom":6.6},{"month":"2022-12","revenue":1147700,"buyers":639,"orders":1085,"mom":4.7},{"month":"2023-01","revenue":1147113,"buyers":685,"orders":1030,"mom":-0.1},{"month":"2023-02","revenue":1150112,"buyers":712,"orders":1016,"mom":0.3},{"month":"2023-03","revenue":1209555,"buyers":802,"orders":1150,"mom":5.2},{"month":"2023-04","revenue":1376555,"buyers":884,"orders":1326,"mom":13.8},{"month":"2023-05","revenue":1592598,"buyers":959,"orders":1419,"mom":15.7},{"month":"2023-06","revenue":1695653,"buyers":1036,"orders":1542,"mom":6.5},{"month":"2023-07","revenue":1819266,"buyers":1122,"orders":1576,"mom":7.3},{"month":"2023-08","revenue":2023991,"buyers":1268,"orders":1885,"mom":11.3},{"month":"2023-09","revenue":2214865,"buyers":1283,"orders":1955,"mom":9.4},{"month":"2023-10","revenue":2345102,"buyers":1404,"orders":2081,"mom":5.9},{"month":"2023-11","revenue":2321555,"buyers":1440,"orders":2153,"mom":-1.0},{"month":"2023-12","revenue":2903930,"buyers":1689,"orders":2658,"mom":25.1},{"month":"2024-01","revenue":3235685,"buyers":1843,"orders":2944,"mom":11.4},{"month":"2024-02","revenue":3712853,"buyers":1940,"orders":3275,"mom":14.7},{"month":"2024-03","revenue":3873957,"buyers":2011,"orders":3580,"mom":4.3}],"cohort":[{"cohort":"2022-01","size":63,"periods":{"0":100,"1":36.5,"2":14.3,"3":4.8,"4":1.6,"5":1.6,"6":6.3,"9":3.2,"10":1.6,"11":4.8,"12":1.6}},{"cohort":"2022-02","size":94,"periods":{"0":100,"1":21.3,"2":9.6,"3":5.3,"4":7.4,"5":2.1,"6":5.3,"7":3.2,"8":1.1,"9":5.3,"10":8.5,"11":3.2,"12":2.1}},{"cohort":"2022-03","size":126,"periods":{"0":100,"1":21.4,"2":11.9,"3":4.8,"4":5.6,"5":4.8,"6":7.1,"7":3.2,"8":4.8,"9":4.8,"10":7.9,"11":7.9,"12":5.6}},{"cohort":"2022-04","size":147,"periods":{"0":100,"1":27.9,"2":15,"3":8.8,"4":6.8,"5":8.2,"6":6.1,"7":4.1,"8":6.8,"9":8.2,"10":11.6,"11":10.2,"12":7.5}},{"cohort":"2022-05","size":156,"periods":{"0":100,"1":23.1,"2":14.1,"3":5.8,"4":4.5,"5":3.2,"6":4.5,"7":4.5,"8":5.1,"9":2.6,"10":6.4,"11":4.5,"12":6.4}},{"cohort":"2022-06","size":187,"periods":{"0":100,"1":22.5,"2":9.1,"3":7.5,"4":8.6,"5":7.5,"6":9.1,"7":5.3,"8":3.7,"9":6.4,"10":6.4,"11":8,"12":4.3}},{"cohort":"2022-07","size":160,"periods":{"0":100,"1":21.9,"2":12.5,"3":7.5,"4":8.1,"5":5,"6":9.4,"7":7.5,"8":5,"9":5.6,"10":10,"11":6.9,"12":5.6}},{"cohort":"2022-08","size":205,"periods":{"0":100,"1":19.5,"2":9.3,"3":7.8,"4":13.2,"5":8.8,"6":7.3,"7":6.8,"8":7.8,"9":5.4,"10":8.3,"11":10.7,"12":8.8}},{"cohort":"2022-09","size":198,"periods":{"0":100,"1":19.7,"2":14.1,"3":8.1,"4":6.1,"5":7.6,"6":9.1,"7":10.1,"8":9.1,"9":6.6,"10":5.1,"11":8.1,"12":6.6}},{"cohort":"2022-10","size":232,"periods":{"0":100,"1":20.7,"2":9.5,"3":8.2,"4":6,"5":7.3,"6":8.6,"7":8.6,"8":9.5,"9":8.2,"10":3.9,"11":9.5,"12":7.3}},{"cohort":"2022-11","size":259,"periods":{"0":100,"1":15.4,"2":10,"3":8.5,"4":7.3,"5":7.3,"6":10,"7":5.8,"8":8.9,"9":8.5,"10":7.7,"11":6.6,"12":7.7}},{"cohort":"2022-12","size":255,"periods":{"0":100,"1":23.1,"2":14.1,"3":10.6,"4":12.5,"5":7.5,"6":10.6,"7":11,"8":9.4,"9":11.8,"10":8.6,"11":9.8,"12":9.8}},{"cohort":"2023-01","size":245,"periods":{"0":100,"1":15.5,"2":10.2,"3":7.8,"4":9,"5":9.4,"6":6.5,"7":9.4,"8":11.4,"9":6.9,"10":10.2,"11":11,"12":9}},{"cohort":"2023-02","size":276,"periods":{"0":100,"1":23.6,"2":12.7,"3":7.6,"4":8.3,"5":6.9,"6":10.9,"7":8,"8":8.7,"9":7.2,"10":8,"11":7.2,"12":8.7}},{"cohort":"2023-03","size":283,"periods":{"0":100,"1":14.1,"2":11.3,"3":12.7,"4":8.1,"5":10.2,"6":9.2,"7":9.5,"8":9.2,"9":11,"10":10.2,"11":9.2,"12":9.9}},{"cohort":"2023-04","size":295,"periods":{"0":100,"1":19,"2":12.5,"3":12.2,"4":10.8,"5":12.5,"6":11.9,"7":10.2,"8":10.5,"9":11.5,"10":8.8,"11":9.8}},{"cohort":"2023-05","size":327,"periods":{"0":100,"1":18,"2":14.4,"3":9.5,"4":8.6,"5":8.6,"6":9.5,"7":13.8,"8":10.4,"9":10.7,"10":8.9}},{"cohort":"2023-06","size":342,"periods":{"0":100,"1":19.9,"2":14,"3":13.7,"4":13.7,"5":12.6,"6":13.7,"7":13.5,"8":12.9,"9":14}},{"cohort":"2023-07","size":338,"periods":{"0":100,"1":20.1,"2":12.7,"3":12.1,"4":10.9,"5":13.3,"6":12.7,"7":13.3,"8":15.7}},{"cohort":"2023-08","size":384,"periods":{"0":100,"1":20.8,"2":15.6,"3":9.6,"4":12,"5":10.4,"6":10.2,"7":13.3}},{"cohort":"2023-09","size":353,"periods":{"0":100,"1":19.5,"2":12.5,"3":11.3,"4":9.3,"5":10.5,"6":11.3}},{"cohort":"2023-10","size":401,"periods":{"0":100,"1":16.7,"2":18.7,"3":13.7,"4":16.7,"5":15}},{"cohort":"2023-11","size":427,"periods":{"0":100,"1":21.3,"2":17.3,"3":13.1,"4":14.5}},{"cohort":"2023-12","size":470,"periods":{"0":100,"1":24.3,"2":18.1,"3":19.8}},{"cohort":"2024-01","size":538,"periods":{"0":100,"1":22.9,"2":19}},{"cohort":"2024-02","size":544,"periods":{"0":100,"1":28.3}},{"cohort":"2024-03","size":409,"periods":{"0":100}}],"segments":[{"segment":"vip","n":497,"avg_ltv":13077,"churn_rate":52.1},{"segment":"premium","n":1931,"avg_ltv":6415,"churn_rate":63.6},{"segment":"regular","n":4313,"avg_ltv":3665,"churn_rate":70.8},{"segment":"budget","n":2858,"avg_ltv":1913,"churn_rate":79.3}],"funnel":[{"event_type":"page_view","users":7842},{"event_type":"product_view","users":7753},{"event_type":"add_to_cart","users":7432},{"event_type":"checkout_start","users":6633},{"event_type":"checkout_complete","users":6458}],"categories":[{"category":"Laptops","revenue":14930930},{"category":"Smartphones","revenue":9343666},{"category":"Cameras","revenue":3639170},{"category":"Tablets","revenue":3460833},{"category":"Gaming","revenue":2721889},{"category":"Smartwatches","revenue":2437799},{"category":"Headphones","revenue":1947702},{"category":"Accessories","revenue":143728}],"churn_by_channel":[{"acquisition_channel":"email_campaign","total":1147,"churn_rate":72.4},{"acquisition_channel":"referral","total":969,"churn_rate":71.6},{"acquisition_channel":"social_media","total":1754,"churn_rate":71.2},{"acquisition_channel":"direct","total":665,"churn_rate":70.8},{"acquisition_channel":"organic_search","total":2666,"churn_rate":70.6},{"acquisition_channel":"influencer","total":306,"churn_rate":70.3},{"acquisition_channel":"paid_search","total":2092,"churn_rate":70.2}],"top_products":[{"name":"Bailey-Hoover Laptop QM-330","category":"Laptops","revenue":938776},{"name":"Nolan-Flynn Laptop RP-053","category":"Laptops","revenue":897467},{"name":"Martin-Ramos Laptop HE-680","category":"Laptops","revenue":891960},{"name":"Campbell-Clark Laptop GF-534","category":"Laptops","revenue":780405},{"name":"Cowan Laptop ND-234","category":"Laptops","revenue":770538},{"name":"Keith Laptop ZQ-256","category":"Laptops","revenue":698470},{"name":"Rivera Laptop QC-429","category":"Laptops","revenue":676508},{"name":"Stewart-Walton Laptop NK-107","category":"Laptops","revenue":675408}]};
+
+// ── Chart defaults ────────────────────────────────────────────
+const C = { cyan:'#00e5ff', red:'#ff4d6d', amber:'#ffc947', green:'#00e096', purple:'#a78bfa', muted:'#5a6a8a', bg:'#141e35', border:'#1e2d4a', text:'#e2e8f8' };
+Chart.defaults.color = C.muted;
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const gridOpts = { color: 'rgba(30,45,74,0.6)', drawBorder: false };
+const tickOpts  = { color: C.muted };
+
+function fmt$(n) { return n>=1e6 ? '$'+(n/1e6).toFixed(1)+'M' : n>=1e3 ? '$'+(n/1e3).toFixed(0)+'K' : '$'+n; }
+
+// ── Tab switching ─────────────────────────────────────────────
+const chartInits = {};
+function switchTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (!chartInits[name]) { chartInits[name] = true; initTab(name); }
+}
+
+function initTab(name) {
+  if (name === 'revenue')    initRevenue();
+  if (name === 'retention')  initRetention();
+  if (name === 'churn')      initChurn();
+  if (name === 'products')   initProducts();
+  if (name === 'insights')   initInsights();
+}
+
+// ── Revenue tab ───────────────────────────────────────────────
+function initRevenue() {
+  const labels = DATA.revenue.map(d => d.month.slice(2));
+  const revs   = DATA.revenue.map(d => d.revenue);
+
+  // Simple linear trend
+  const n = revs.length, xi = revs.map((_,i)=>i);
+  const mx = xi.reduce((a,b)=>a+b)/n, my = revs.reduce((a,b)=>a+b)/n;
+  const slope = xi.map((x,i)=>(x-mx)*(revs[i]-my)).reduce((a,b)=>a+b) / xi.map(x=>(x-mx)**2).reduce((a,b)=>a+b);
+  const intercept = my - slope*mx;
+  const trend = xi.map(x => Math.round(slope*x+intercept));
+  const fcRevs = [3873957, 4024000, 4178000]; // last real + 2 forecast
+  const fcLabels = ['24-03','24-04','24-05'];
+
+  new Chart(document.getElementById('revenueChart'), {
+    data: {
+      labels: [...labels, '24-04','24-05'],
+      datasets: [
+        { type:'bar', label:'Revenue', data:[...revs,null,null], backgroundColor: revs.map((v,i)=>i>=24?'rgba(0,229,255,0.85)':'rgba(0,229,255,0.45)'), borderRadius:3 },
+        { type:'line', label:'Trend', data:[...trend, Math.round(slope*27+intercept), Math.round(slope*28+intercept)], borderColor:C.amber, borderWidth:2, borderDash:[6,3], pointRadius:0, tension:0.3 },
+        { type:'line', label:'Forecast', data:[...Array(25).fill(null), revs[24], Math.round(slope*27+intercept), Math.round(slope*28+intercept)], borderColor:C.purple, borderWidth:2, pointBackgroundColor:C.purple, pointRadius:[...Array(25).fill(0),4,4,4], tension:0.3 }
+      ]
+    },
+    options: { responsive:true, plugins:{ legend:{ labels:{ color:C.muted, boxWidth:12 } } }, scales:{ x:{ grid:gridOpts, ticks:{...tickOpts, maxRotation:45} }, y:{ grid:gridOpts, ticks:{ color:C.muted, callback:v=>fmt$(v) } } } }
+  });
+
+  const moms = DATA.revenue.map(d=>d.mom);
+  new Chart(document.getElementById('momChart'), {
+    type:'bar', data:{ labels, datasets:[{ data:moms, backgroundColor: moms.map(v=>v>0?'rgba(0,224,150,0.7)':'rgba(255,77,109,0.7)'), borderRadius:3 }] },
+    options:{ responsive:true, plugins:{ legend:{display:false} }, scales:{ x:{grid:gridOpts,ticks:{...tickOpts,maxRotation:45}}, y:{grid:gridOpts, ticks:{color:C.muted, callback:v=>v+'%'}, suggestedMin:-20, suggestedMax:120} } }
+  });
+
+  const catColors = [C.cyan,C.purple,C.amber,C.green,C.red,'#38bdf8','#fb923c','#a3e635'];
+  new Chart(document.getElementById('catChart'), {
+    type:'bar', data:{ labels: DATA.categories.map(d=>d.category), datasets:[{ data: DATA.categories.map(d=>d.revenue), backgroundColor: catColors, borderRadius:4 }] },
+    options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{ x:{grid:gridOpts,ticks:{color:C.muted,callback:v=>fmt$(v)}}, y:{grid:{display:false},ticks:tickOpts} } }
+  });
+
+  new Chart(document.getElementById('buyersChart'), {
+    type:'line', data:{ labels, datasets:[{ data: DATA.revenue.map(d=>d.buyers), borderColor:C.cyan, backgroundColor:'rgba(0,229,255,0.08)', fill:true, tension:0.4, pointRadius:0 }] },
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ x:{grid:gridOpts,ticks:{...tickOpts,maxRotation:45}}, y:{grid:gridOpts,ticks:tickOpts} } }
+  });
+}
+
+// ── Retention tab ─────────────────────────────────────────────
+function initRetention() {
+  // Heatmap
+  const maxPeriod = 12;
+  const table = document.getElementById('cohort-table');
+  let html = '<thead><tr><th>Cohort</th><th>Size</th>';
+  for(let p=0;p<=maxPeriod;p++) html += `<th>M+${p}</th>`;
+  html += '</tr></thead><tbody>';
+
+  DATA.cohort.slice(0,22).forEach(row => {
+    html += `<tr><td>${row.cohort}</td><td style="color:var(--muted)">${row.size}</td>`;
+    for(let p=0;p<=maxPeriod;p++){
+      const v = row.periods[p];
+      if(v==null){ html+='<td></td>'; continue; }
+      const pct = Math.min(100,v);
+      // Color: 0=red, 15=amber, 30+=green
+      const r = pct<15 ? 255 : pct<30 ? Math.round(255-(pct-15)/15*200) : 55;
+      const g = pct<15 ? Math.round(pct/15*150) : pct<30 ? 150+Math.round((pct-15)/15*74) : 224;
+      const b = pct<15 ? 60 : pct<30 ? 60 : Math.round((pct-30)/70*80)+60;
+      const textColor = pct > 30 ? '#0a1020' : '#e2e8f8';
+      html += `<td><span class="hm-cell" style="background:rgb(${r},${g},${b});color:${textColor}">${v.toFixed(0)}%</span></td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+
+  // Average retention line
+  const avgByPeriod = [];
+  for(let p=1;p<=12;p++){
+    const vals = DATA.cohort.map(c=>c.periods[p]).filter(v=>v!=null);
+    avgByPeriod.push(vals.length ? +(vals.reduce((a,b)=>a+b)/vals.length).toFixed(1) : null);
+  }
+  new Chart(document.getElementById('retentionLineChart'),{
+    type:'line', data:{
+      labels: Array.from({length:12},(_,i)=>`M+${i+1}`),
+      datasets:[
+        { label:'Avg Retention', data:avgByPeriod, borderColor:C.cyan, backgroundColor:'rgba(0,229,255,0.1)', fill:true, tension:0.4, pointBackgroundColor:C.cyan, pointRadius:4 },
+        { label:'Target (post-fix)', data:[null,null,14,...Array(9).fill(null)], borderColor:C.amber, borderWidth:2, borderDash:[6,3], pointBackgroundColor:C.amber, pointRadius:[0,0,6,...Array(9).fill(0)] }
+      ]
+    },
+    options:{ responsive:true, plugins:{legend:{labels:{color:C.muted,boxWidth:12}}}, scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts, ticks:{color:C.muted,callback:v=>v+'%'}, min:0, max:45} } }
+  });
+
+  // Compare early vs recent cohorts
+  const early  = DATA.cohort.slice(0,6);
+  const recent = DATA.cohort.slice(15,21);
+  function avgPeriods(cohorts){ return Array.from({length:13},(_,p)=>{ const v=cohorts.map(c=>c.periods[p]).filter(x=>x!=null); return v.length?+(v.reduce((a,b)=>a+b)/v.length).toFixed(1):null; }); }
+
+  new Chart(document.getElementById('cohortCompareChart'),{
+    type:'line', data:{
+      labels: Array.from({length:13},(_,i)=>`M+${i}`),
+      datasets:[
+        { label:'Early cohorts (2022 H1)', data:avgPeriods(early), borderColor:C.red, tension:0.4, pointRadius:3 },
+        { label:'Recent cohorts (2023 H2)', data:avgPeriods(recent), borderColor:C.green, tension:0.4, pointRadius:3 }
+      ]
+    },
+    options:{ responsive:true, plugins:{legend:{labels:{color:C.muted,boxWidth:12}}}, scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{color:C.muted,callback:v=>v+'%'}} } }
+  });
+}
+
+// ── Churn tab ─────────────────────────────────────────────────
+function initChurn() {
+  const segColors = [C.cyan, C.purple, C.amber, C.red];
+  new Chart(document.getElementById('churnSegChart'),{
+    type:'bar', data:{
+      labels: DATA.segments.map(d=>d.segment),
+      datasets:[{ data: DATA.segments.map(d=>d.churn_rate), backgroundColor:segColors, borderRadius:6 }]
+    },
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false},ticks:tickOpts}, y:{grid:gridOpts, min:40, max:90, ticks:{color:C.muted,callback:v=>v+'%'}} } }
+  });
+
+  // Funnel
+  const funnelLabels = ['Page View','Product View','Add to Cart','Checkout Start','Checkout Complete'];
+  const funnelColors = ['#00e5ff','#22d3ee','#ffc947','#fb923c','#00e096'];
+  const top = DATA.funnel[0].users;
+  const fDiv = document.getElementById('funnelViz');
+  DATA.funnel.forEach((d,i)=>{
+    const pct = (d.users/top*100).toFixed(1);
+    const drop = i>0 ? ((DATA.funnel[i-1].users-d.users)/DATA.funnel[i-1].users*100).toFixed(1) : null;
+    fDiv.innerHTML += `
+      <div class="funnel-step">
+        ${drop ? `<div class="funnel-drop">▼ −${drop}% drop</div>` : ''}
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar-fill" style="width:${pct}%;background:${funnelColors[i]}">
+            <span class="funnel-label">${funnelLabels[i]}</span>
+            <span class="funnel-pct">${Number(d.users).toLocaleString()} (${pct}%)</span>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  new Chart(document.getElementById('churnChanChart'),{
+    type:'bar', data:{
+      labels: DATA.churn_by_channel.map(d=>d.acquisition_channel.replace('_',' ')),
+      datasets:[{ data: DATA.churn_by_channel.map(d=>d.churn_rate), backgroundColor: DATA.churn_by_channel.map(d=>d.churn_rate>71.5?C.red:d.churn_rate>71?C.amber:C.cyan), borderRadius:4 }]
+    },
+    options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{ x:{grid:gridOpts,ticks:{color:C.muted,callback:v=>v+'%'},min:68,max:74}, y:{grid:{display:false},ticks:tickOpts} } }
+  });
+
+  new Chart(document.getElementById('ltvChurnChart'),{
+    type:'scatter', data:{
+      datasets:[{ label:'Segments', data: DATA.segments.map(d=>({x:d.churn_rate,y:d.avg_ltv,label:d.segment})), backgroundColor:segColors, pointRadius:10 }]
+    },
+    options:{ responsive:true, plugins:{
+      legend:{display:false},
+      tooltip:{ callbacks:{ label: ctx => `${DATA.segments[ctx.dataIndex].segment}: Churn ${ctx.parsed.x}% · LTV $${ctx.parsed.y.toLocaleString()}` } }
+    }, scales:{ x:{grid:gridOpts,ticks:{color:C.muted,callback:v=>v+'%'},title:{display:true,text:'Churn Rate %',color:C.muted}}, y:{grid:gridOpts,ticks:{color:C.muted,callback:v=>fmt$(v)},title:{display:true,text:'Avg LTV',color:C.muted}} } }
+  });
+}
+
+// ── Products tab ──────────────────────────────────────────────
+function initProducts() {
+  const catColors = ['#00e5ff','#a78bfa','#ffc947','#00e096','#ff4d6d','#38bdf8','#fb923c','#a3e635'];
+  new Chart(document.getElementById('catDonutChart'),{
+    type:'doughnut', data:{
+      labels: DATA.categories.map(d=>d.category),
+      datasets:[{ data: DATA.categories.map(d=>d.revenue), backgroundColor:catColors, borderColor:'#141e35', borderWidth:3 }]
+    },
+    options:{ responsive:true, cutout:'62%', plugins:{ legend:{ position:'right', labels:{color:C.muted,padding:12,boxWidth:12} }, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt$(ctx.raw)} (${(ctx.raw/41722348*100).toFixed(1)}%)`}} } }
+  });
+
+  const maxRev = DATA.top_products[0].revenue;
+  const prodList = document.getElementById('prodList');
+  DATA.top_products.forEach((p,i)=>{
+    const barPct = Math.round(p.revenue/maxRev*100);
+    prodList.innerHTML += `
+      <div class="prod-row">
+        <div class="prod-rank">${i+1}</div>
+        <div class="prod-info">
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-cat">${p.category}</div>
+          <div class="prod-bar"><div class="prod-bar-fill" style="width:${barPct}%"></div></div>
+        </div>
+        <div class="prod-rev">${fmt$(p.revenue)}</div>
+      </div>`;
+  });
+}
+
+// ── Insights tab ──────────────────────────────────────────────
+function initInsights() {
+  new Chart(document.getElementById('impactChart'),{
+    type:'bar', data:{
+      labels:['Re-engagement Drip','Win-back Campaign','Loyalty Programme','Checkout Fix'],
+      datasets:[
+        { label:'Conservative', data:[1200000,800000,600000,300000], backgroundColor:'rgba(0,229,255,0.5)', borderRadius:4 },
+        { label:'Optimistic',   data:[2100000,1100000,1200000,360000], backgroundColor:'rgba(0,224,150,0.5)', borderRadius:4 }
+      ]
+    },
+    options:{ responsive:true, plugins:{legend:{labels:{color:C.muted,boxWidth:12}}}, scales:{ x:{grid:{display:false},ticks:tickOpts}, y:{grid:gridOpts,ticks:{color:C.muted,callback:v=>fmt$(v)}} } }
+  });
+}
+
+// ── Boot: init revenue tab (visible by default) ───────────────
+chartInits['revenue'] = true;
+window.addEventListener('DOMContentLoaded', initRevenue);
+</script>
+</body>
+</html>

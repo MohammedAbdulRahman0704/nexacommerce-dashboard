@@ -1,0 +1,5 @@
+segment,total_customers,pct_of_base,avg_ltv,avg_order_value,avg_orders,churned_count,churn_rate_pct
+vip,498,5.2,12862.66,1965.83,6.7,261,52.4
+premium,1928,20.1,6416.94,1915.15,3.3,1221,63.3
+regular,4299,44.8,3664.48,1986.04,1.9,3045,70.8
+budget,2873,29.9,1908.99,1967.25,1.0,2280,79.4

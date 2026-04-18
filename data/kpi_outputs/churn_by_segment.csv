@@ -1,0 +1,5 @@
+segment,total,churned,churn_rate_pct,active_avg_ltv,churned_avg_ltv
+budget,2873,2280,79.4,3160.4,1583.52
+regular,4299,3045,70.8,5887.36,2749.05
+premium,1928,1221,63.3,10180.86,4237.5
+vip,498,261,52.4,16758.16,9325.37
